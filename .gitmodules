@@ -1,0 +1,6 @@
+[submodule "src/piqi/chat"]
+	path = src/piqi/chat
+	url = git@bitbucket.org:chaos_ad/chat-piqi.git
+[submodule "src/piqi/gateway"]
+	path = src/piqi/gateway
+	url = git@bitbucket.org:chaos_ad/gateway-piqi.git

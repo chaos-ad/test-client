@@ -1,0 +1,2 @@
+.erlang-type-prefix "gateway_"
+.include [ .module gateway/gateway ]

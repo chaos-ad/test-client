@@ -1,0 +1,155 @@
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+        <title>Websocket Test Client</title>
+        <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+        <script type="text/javascript">
+            var websocket;
+            var callbacks = [];
+            $(document).ready(init);
+
+            function init() {
+                $("#conn_block").show();
+                $("#auth_block").hide();
+                $("#request_block").hide();
+                if(!("WebSocket" in window)){
+                    $('#status').text('Websockets not supported').css("color", "red");
+                    $('navigation').hide();
+                } else {
+                    $('#status').text('Disconnected').css("color", "blue");
+                };
+            };
+
+            function connect() {
+                var host = $("#server").val()
+                websocket = new WebSocket(host);
+                websocket.onopen = function(event) { on_open(event) };
+                websocket.onclose = function(event) { on_close(event) };
+                websocket.onmessage = function(event) { on_message(event) };
+                websocket.onerror = function(event) { on_error(event) };
+            };
+
+            function login() {
+                send_request( {login: {userid: $("#userid").val(),
+                                       passwd: $("#passwd").val()} },
+                    function(response) {
+                        if (response.ok) {
+                            $('#status').html('<p><span style="color: green;">Logged in</span></p>');
+                            $('#blocktitle').html('<p><span style="color: green;">Logged in</span></p>');
+                            $("#auth_block").hide();
+                            $("#request_block").show();
+                        } else if (response.error) {
+                            $('#status').html('<p><span style="color: green;">Login failed: "' + response.error + '"</span></p>');
+
+                        }
+                    }
+                );
+            }
+
+            function on_open(event) {
+                $('#status').html('<p><span style="color: green;">Connected</span></p>');
+                $("#conn_block").hide();
+                $("#auth_block").show();
+            }
+
+            function on_close(event) {
+                $('#status').html('<p><span style="color: green;">Disconnected</span></p>');
+                $("#conn_block").show();
+                $("#auth_block").hide();
+                $("#auth_block").hide();
+                $("#request_block").hide();
+                show_screen('<span style="color: red;">DISCONNECTED </span>');
+            };
+
+            function on_message(event) {
+                var resp = JSON.parse(event.data);
+                if (resp.service_event) {
+                    var service = resp.service_event.service;
+                    var payload = atob(resp.service_event.payload);
+                    show_screen('<span style="color: green;">Got event from ' + service + ': "' + payload + '"</span>');
+                } else if (resp.gateway_event) {
+                    var service = resp.gateway_event.service;
+                    var payload = atob(resp.service_event.payload);
+                    show_screen('<span style="color: green;">Got service event: "' + payload + '"</span>');
+                } else {
+                    callbacks.shift()(resp);
+                }
+            };
+            function disconnect() {
+                websocket.close();
+            };
+
+            function submit_request() {
+                var request = JSON.parse($("#request").val());
+                var serviceid = $("#serviceid").val();
+                send_service_request(serviceid, request);
+            };
+
+
+            function show_screen(txt) {
+                $('#output').prepend('<p>' + txt + '</p>');
+            };
+
+            function clear_screen() {
+                $('#output').html("");
+            };
+
+            function send_request(request, callback) {
+                var raw = JSON.stringify(request);
+                show_screen('sending: ' + raw);
+                websocket.send(raw);
+                callbacks.push(callback);
+            }
+
+            function enable_service(serviceId) {
+                send_request( {service_enable: {service: serviceId}} );
+            }
+
+            function disable_service(serviceId) {
+                send_request( {service_disable: {service: serviceId}} );
+            }
+
+            function send_service_request(serviceId, request) {
+                send_request( {
+                    service_request: {
+                        service: serviceId,
+                        payload: btoa(JSON.stringify(request))
+                    }}
+                );
+            }
+        </script>
+    </head>
+    <body>
+        <div id="header">
+            <h1>Websocket client</h1>
+            <h2 id="status"></h2>
+            <h3 id="statename"></h3>
+        </div>
+        <div id="navigation">
+            <p id="conn_block">
+                <input type='text' id="server" value="ws://localhost:8081/ws"></input>
+                <button type="button" onclick="connect()">Connect</button>
+            </p>
+            <div id="auth_block">
+                <p>
+                    <input type='text' id="userid" value="user1"></input>
+                    <input type='password' id="passwd" value="letmein"></input>
+                    <button type="button" onclick="login()">Login</button>
+                </p>
+            </div>
+            <div id="request_block">
+                <p>
+                    <input type='text' id="serviceid" value=></input>
+                    <input type='text' id="payload" value=></input>
+                    <button type="button" onclick="submit_request();">send</button>
+                </p>
+            </div>
+            <div id="logging_block" style="border-style: dashed;">
+                <p>
+                    <button id="clear" onclick="clear_screen()" >Clear text</button>
+                    <div id="output"></div>
+                </p>
+            </div>
+        </div>
+    </body>
+</html>

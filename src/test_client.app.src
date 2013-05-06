@@ -1,0 +1,14 @@
+{application, test_client, [
+    {description, ""},
+    {vsn, git},
+    {registered, []},
+    {applications, [
+        kernel,
+        stdlib,
+        lager,
+        cowboy,
+        mimetypes
+    ]},
+    {mod, { test_client_app, [] }},
+    {env, []}
+]}.
